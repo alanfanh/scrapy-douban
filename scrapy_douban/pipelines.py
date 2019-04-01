@@ -10,7 +10,7 @@ import pymysql,re
 
 class ScrapyDoubanPipeline(object):
     def __init__(self):
-        self.conn=pymysql.connect(host='127.0.0.1',user='root',password='root',database="Douban",charset='utf8')
+        self.conn=pymysql.connect(host='127.0.0.1',user='root',password='root',database="douban",charset='utf8')
         self.cur=self.conn.cursor()
 
 
@@ -24,19 +24,23 @@ class ScrapyDoubanPipeline(object):
                 pass
             # test库中没有movies表，则创建。
             else:
-                creat_movie='CREATE TABLE movies (id BIGINT NOT NULL AUTO_INCREMENT,rank VARCHAR(10) NOT NULL,name VARCHAR(100) NOT NULL,info VARCHAR(100) NOT NULL,score VARCHAR(10) NOT NULL,num VARCHAR(10),PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8;'
+                creat_movie='CREATE TABLE movies (id BIGINT NOT NULL AUTO_INCREMENT,rank VARCHAR(10) NOT NULL,name VARCHAR(100) NOT NULL,score VARCHAR(4) NOT NULL,info VARCHAR(100),num VARCHAR(10),movie_type VARCHAR(20),country VARCHAR(10),year VARCHAR(10),link VARCHAR(100),PRIMARY KEY (id)) ENGINE=InnoDB DEFAULT CHARSET=utf8;'
                 self.cur.execute(creat_movie)
+            # 写入数据库失败时，报错
             try:
-                self.cur.execute("SELECT name FROM movies WHERE ")
+                self.cur.execute("""SELECT * FROM movies WHERE name=%s""",item['movie_name'])
+                # 检测数据是否重复
                 repeat=self.cur.fetchone()
                 if repeat:
                     pass
                 else:
-                    sql="""INSERT INTO movies (rank,name,info,score,num) VALUES (%s,%s,%s,%s,%s)"""
-                    self.cur.execute(sql,(item['rank'],item['name'],item['info'],item['star'],item['number']))
+                    sql="""INSERT INTO movies (rank,name,score,info,num,movie_type,country,year,link) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s)"""
+                    print(sql)
+                    self.cur.execute(sql,(item['movie_rank'],item['movie_name'],item['movie_star'],item['movie_quote'],item['movie_number'],item['movie_type'],item['movie_country'],item['movie_year'],item['movie_link']))
                     self.conn.commit()
             except Exception as e:
-                print('write mysql error')
+                print('ValueError:', e)
+            return item
 
     def close(self):
         self.cur.close()
